@@ -40,27 +40,35 @@ func (p *AssetStatsProcessor) reset() {
 }
 
 func (p *AssetStatsProcessor) ProcessChange(change ingest.Change) error {
-	if change.Type != xdr.LedgerEntryTypeTrustline {
+	switch change.Type {
+	case xdr.LedgerEntryTypeTrustline:
+		if p.useLedgerEntryCache {
+			return p.useCachedChange(change)
+		}
+		return p.processTrustlineChange(change)
+	default:
 		return nil
 	}
+}
 
-	if p.useLedgerEntryCache {
-		err := p.cache.AddChange(change)
+func (p *AssetStatsProcessor) useCachedChange(change ingest.Change) error {
+	err := p.cache.AddChange(change)
+	if err != nil {
+		return errors.Wrap(err, "error adding to ledgerCache")
+	}
+
+	if p.cache.Size() > maxBatchSize {
+		err = p.Commit()
 		if err != nil {
-			return errors.Wrap(err, "error adding to ledgerCache")
+			return errors.Wrap(err, "error in Commit")
 		}
-
-		if p.cache.Size() > maxBatchSize {
-			err = p.Commit()
-			if err != nil {
-				return errors.Wrap(err, "error in Commit")
-			}
-			p.reset()
-		}
-		return nil
+		p.reset()
 	}
+	return nil
+}
 
-	if !(change.Pre == nil && change.Post != nil) {
+func (p *AssetStatsProcessor) processTrustlineChange(change ingest.Change) error {
+	if change.Pre != nil || change.Post == nil {
 		return errors.New("AssetStatsProcessor is in insert only mode")
 	}
 
