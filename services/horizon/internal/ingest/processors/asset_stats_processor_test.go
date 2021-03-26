@@ -137,6 +137,15 @@ func (s *AssetStatsProcessorTestSuiteLedger) TestInsertClaimableBalance() {
 			V0:   &xdr.Hash{1, 2, 3},
 		},
 	}
+
+	nativeClaimableBalance := xdr.ClaimableBalanceEntry{
+		Asset:  xdr.MustNewNativeAsset(),
+		Amount: 100000000,
+		BalanceId: xdr.ClaimableBalanceId{
+			Type: 0,
+			V0:   &xdr.Hash{1, 2, 43},
+		},
+	}
 	lastModifiedLedgerSeq := xdr.Uint32(1234)
 
 	// test inserts
@@ -149,6 +158,19 @@ func (s *AssetStatsProcessorTestSuiteLedger) TestInsertClaimableBalance() {
 			Data: xdr.LedgerEntryData{
 				Type:             xdr.LedgerEntryTypeClaimableBalance,
 				ClaimableBalance: &claimableBalance,
+			},
+		},
+	})
+	s.Assert().NoError(err)
+
+	err = s.processor.ProcessChange(ingest.Change{
+		Type: xdr.LedgerEntryTypeClaimableBalance,
+		Pre:  nil,
+		Post: &xdr.LedgerEntry{
+			LastModifiedLedgerSeq: lastModifiedLedgerSeq,
+			Data: xdr.LedgerEntryData{
+				Type:             xdr.LedgerEntryTypeClaimableBalance,
+				ClaimableBalance: &nativeClaimableBalance,
 			},
 		},
 	})

@@ -108,6 +108,10 @@ func (s AssetStatSet) AddTrustline(trustLine xdr.TrustLineEntry) error {
 
 // AddClaimableBalance updates the set with a claimable balance entry from a history archive snapshot.
 func (s AssetStatSet) AddClaimableBalance(cBalance xdr.ClaimableBalanceEntry) error {
+	if cBalance.Asset.Type == xdr.AssetTypeAssetTypeNative {
+		return nil
+	}
+
 	return s.addDelta(cBalance.Asset, delta{ClaimableBalances: int64(cBalance.Amount)}, delta{ClaimableBalances: 1})
 }
 

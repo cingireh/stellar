@@ -333,6 +333,10 @@ func (p *AssetStatsProcessor) adjustAssetStatForClaimableBalance(
 		deltaBalances.ClaimableBalances += int64(post.Amount)
 	}
 
+	if asset.Type == xdr.AssetTypeAssetTypeNative {
+		return nil
+	}
+
 	err := p.assetStatSet.addDelta(asset, deltaBalances, deltaAccounts)
 	if err != nil {
 		return errors.Wrap(err, "error running AssetStatSet.addDelta")

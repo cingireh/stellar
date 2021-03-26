@@ -38,6 +38,18 @@ func assertAllEquals(t *testing.T, set AssetStatSet, expected []history.ExpAsset
 	}
 }
 
+func TestAddNativeClaimableBalance(t *testing.T) {
+	set := AssetStatSet{}
+	claimableBalance := xdr.ClaimableBalanceEntry{
+		BalanceId: xdr.ClaimableBalanceId{},
+		Claimants: nil,
+		Asset:     xdr.MustNewNativeAsset(),
+		Amount:    100,
+	}
+	assert.NoError(t, set.AddClaimableBalance(claimableBalance))
+	assert.Empty(t, set.All())
+}
+
 func TestAddAndRemoveAssetStats(t *testing.T) {
 	set := AssetStatSet{}
 	eur := "EUR"
