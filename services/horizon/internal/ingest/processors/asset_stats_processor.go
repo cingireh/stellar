@@ -80,17 +80,13 @@ func (p *AssetStatsProcessor) commitClaimableBalanceChange(change ingest.Change)
 	switch {
 	case change.Pre == nil && change.Post != nil:
 		// Created
-		post := change.Post.Data.MustClaimableBalance()
-		return p.assetStatSet.AddClaimableBalance(nil, &post)
+		return p.assetStatSet.AddClaimableBalance(nil, change.Post.Data.ClaimableBalance)
 	case change.Pre != nil && change.Post != nil:
 		// Updated
-		pre := change.Pre.Data.MustClaimableBalance()
-		post := change.Post.Data.MustClaimableBalance()
-		return p.assetStatSet.AddClaimableBalance(&pre, &post)
+		return p.assetStatSet.AddClaimableBalance(change.Pre.Data.ClaimableBalance, change.Post.Data.ClaimableBalance)
 	case change.Pre != nil && change.Post == nil:
 		// Removed
-		pre := change.Pre.Data.MustClaimableBalance()
-		return p.assetStatSet.AddClaimableBalance(&pre, nil)
+		return p.assetStatSet.AddClaimableBalance(change.Pre.Data.ClaimableBalance, nil)
 	default:
 		return errors.New("Invalid io.Change: change.Pre == nil && change.Post == nil")
 	}
@@ -100,17 +96,13 @@ func (p *AssetStatsProcessor) commitTrustlineChange(change ingest.Change) error 
 	switch {
 	case change.Pre == nil && change.Post != nil:
 		// Created
-		post := change.Post.Data.MustTrustLine()
-		return p.assetStatSet.AddTrustline(nil, &post)
+		return p.assetStatSet.AddTrustline(nil, change.Post.Data.TrustLine)
 	case change.Pre != nil && change.Post != nil:
 		// Updated
-		pre := change.Pre.Data.MustTrustLine()
-		post := change.Post.Data.MustTrustLine()
-		return p.assetStatSet.AddTrustline(&pre, &post)
+		return p.assetStatSet.AddTrustline(change.Pre.Data.TrustLine, change.Post.Data.TrustLine)
 	case change.Pre != nil && change.Post == nil:
 		// Removed
-		pre := change.Pre.Data.MustTrustLine()
-		return p.assetStatSet.AddTrustline(&pre, nil)
+		return p.assetStatSet.AddTrustline(change.Pre.Data.TrustLine, nil)
 	default:
 		return errors.New("Invalid io.Change: change.Pre == nil && change.Post == nil")
 	}
