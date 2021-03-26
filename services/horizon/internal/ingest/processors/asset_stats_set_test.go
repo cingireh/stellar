@@ -60,7 +60,7 @@ func TestAddAndRemoveAssetStats(t *testing.T) {
 
 	assert.NoError(
 		t,
-		set.Add(xdr.TrustLineEntry{
+		set.AddTrustline(xdr.TrustLineEntry{
 			AccountId: xdr.MustAddress("GAOQJGUAB7NI7K7I62ORBXMN3J4SSWQUQ7FOEPSDJ322W2HMCNWPHXFB"),
 			Asset:     xdr.MustNewCreditAsset(eur, trustLineIssuer.Address()),
 			Balance:   1,
@@ -73,10 +73,10 @@ func TestAddAndRemoveAssetStats(t *testing.T) {
 	eurAssetStat.Balances.ClaimableBalances = "23"
 	assert.NoError(
 		t,
-		set.AddDelta(
+		set.addDelta(
 			xdr.MustNewCreditAsset(eur, trustLineIssuer.Address()),
-			deltas{ClaimableBalances: 23},
-			deltas{ClaimableBalances: 1},
+			delta{ClaimableBalances: 23},
+			delta{ClaimableBalances: 1},
 		),
 	)
 
@@ -84,7 +84,7 @@ func TestAddAndRemoveAssetStats(t *testing.T) {
 
 	assert.NoError(
 		t,
-		set.Add(xdr.TrustLineEntry{
+		set.AddTrustline(xdr.TrustLineEntry{
 			AccountId: xdr.MustAddress("GAOQJGUAB7NI7K7I62ORBXMN3J4SSWQUQ7FOEPSDJ322W2HMCNWPHXFB"),
 			Asset:     xdr.MustNewCreditAsset(eur, trustLineIssuer.Address()),
 			Balance:   24,
@@ -101,7 +101,7 @@ func TestAddAndRemoveAssetStats(t *testing.T) {
 	usd := "USD"
 	assert.NoError(
 		t,
-		set.Add(xdr.TrustLineEntry{
+		set.AddTrustline(xdr.TrustLineEntry{
 			AccountId: xdr.MustAddress("GC3C4AKRBQLHOJ45U4XG35ESVWRDECWO5XLDGYADO6DPR3L7KIDVUMML"),
 			Asset:     xdr.MustNewCreditAsset(usd, trustLineIssuer.Address()),
 			Balance:   10,
@@ -112,7 +112,7 @@ func TestAddAndRemoveAssetStats(t *testing.T) {
 	ether := "ETHER"
 	assert.NoError(
 		t,
-		set.Add(xdr.TrustLineEntry{
+		set.AddTrustline(xdr.TrustLineEntry{
 			AccountId: xdr.MustAddress("GC3C4AKRBQLHOJ45U4XG35ESVWRDECWO5XLDGYADO6DPR3L7KIDVUMML"),
 			Asset:     xdr.MustNewCreditAsset(ether, trustLineIssuer.Address()),
 			Balance:   3,
@@ -120,10 +120,10 @@ func TestAddAndRemoveAssetStats(t *testing.T) {
 		}),
 	)
 
-	// Add an authorized_to_maintain_liabilities trust line
+	// AddTrustline an authorized_to_maintain_liabilities trust line
 	assert.NoError(
 		t,
-		set.Add(xdr.TrustLineEntry{
+		set.AddTrustline(xdr.TrustLineEntry{
 			AccountId: xdr.MustAddress("GAOQJGUAB7NI7K7I62ORBXMN3J4SSWQUQ7FOEPSDJ322W2HMCNWPHXFB"),
 			Asset:     xdr.MustNewCreditAsset(ether, trustLineIssuer.Address()),
 			Balance:   4,
@@ -131,10 +131,10 @@ func TestAddAndRemoveAssetStats(t *testing.T) {
 		}),
 	)
 
-	// Add an unauthorized trust line
+	// AddTrustline an unauthorized trust line
 	assert.NoError(
 		t,
-		set.Add(xdr.TrustLineEntry{
+		set.AddTrustline(xdr.TrustLineEntry{
 			AccountId: xdr.MustAddress("GAOQJGUAB7NI7K7I62ORBXMN3J4SSWQUQ7FOEPSDJ322W2HMCNWPHXFB"),
 			Asset:     xdr.MustNewCreditAsset(ether, trustLineIssuer.Address()),
 			Balance:   5,
@@ -195,7 +195,7 @@ func TestAddAndRemoveAssetStats(t *testing.T) {
 func TestOverflowAssetStatSet(t *testing.T) {
 	set := AssetStatSet{}
 	eur := "EUR"
-	err := set.Add(xdr.TrustLineEntry{
+	err := set.AddTrustline(xdr.TrustLineEntry{
 		AccountId: xdr.MustAddress("GAOQJGUAB7NI7K7I62ORBXMN3J4SSWQUQ7FOEPSDJ322W2HMCNWPHXFB"),
 		Asset:     xdr.MustNewCreditAsset(eur, trustLineIssuer.Address()),
 		Balance:   math.MaxInt64,
@@ -229,7 +229,7 @@ func TestOverflowAssetStatSet(t *testing.T) {
 		t.Fatalf("expected asset stat to be %v but got %v", eurAssetStat, all[0])
 	}
 
-	err = set.Add(xdr.TrustLineEntry{
+	err = set.AddTrustline(xdr.TrustLineEntry{
 		AccountId: xdr.MustAddress("GAOQJGUAB7NI7K7I62ORBXMN3J4SSWQUQ7FOEPSDJ322W2HMCNWPHXFB"),
 		Asset:     xdr.MustNewCreditAsset(eur, trustLineIssuer.Address()),
 		Balance:   math.MaxInt64,

@@ -284,8 +284,8 @@ func (p *AssetStatsProcessor) adjustAssetStatForTrustline(
 	pre *xdr.TrustLineEntry,
 	post *xdr.TrustLineEntry,
 ) error {
-	deltaAccounts := deltas{}
-	deltaBalances := deltas{}
+	deltaAccounts := delta{}
+	deltaBalances := delta{}
 
 	if pre == nil && post == nil {
 		return ingest.NewStateError(errors.New("both pre and post trustlines cannot be nil"))
@@ -303,9 +303,9 @@ func (p *AssetStatsProcessor) adjustAssetStatForTrustline(
 		deltaBalances.AddByFlags(post.Flags, int64(post.Balance))
 	}
 
-	err := p.assetStatSet.AddDelta(asset, deltaBalances, deltaAccounts)
+	err := p.assetStatSet.addDelta(asset, deltaBalances, deltaAccounts)
 	if err != nil {
-		return errors.Wrap(err, "error running AssetStatSet.AddDelta")
+		return errors.Wrap(err, "error running AssetStatSet.addDelta")
 	}
 	return nil
 }
@@ -314,8 +314,8 @@ func (p *AssetStatsProcessor) adjustAssetStatForClaimableBalance(
 	pre *xdr.ClaimableBalanceEntry,
 	post *xdr.ClaimableBalanceEntry,
 ) error {
-	deltaAccounts := deltas{}
-	deltaBalances := deltas{}
+	deltaAccounts := delta{}
+	deltaBalances := delta{}
 
 	if pre == nil && post == nil {
 		return ingest.NewStateError(errors.New("both pre and post claimable balances cannot be nil"))
@@ -333,9 +333,9 @@ func (p *AssetStatsProcessor) adjustAssetStatForClaimableBalance(
 		deltaBalances.ClaimableBalances += int64(post.Amount)
 	}
 
-	err := p.assetStatSet.AddDelta(asset, deltaBalances, deltaAccounts)
+	err := p.assetStatSet.addDelta(asset, deltaBalances, deltaAccounts)
 	if err != nil {
-		return errors.Wrap(err, "error running AssetStatSet.AddDelta")
+		return errors.Wrap(err, "error running AssetStatSet.addDelta")
 	}
 	return nil
 }

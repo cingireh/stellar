@@ -96,24 +96,29 @@ func (value assetStatValue) ConvertToHistoryObject() history.ExpAssetStat {
 // AssetStatSet represents a collection of asset stats
 type AssetStatSet map[assetStatKey]*assetStatValue
 
-// Add updates the set with a trustline entry from a history archive snapshot.
-func (s AssetStatSet) Add(trustLine xdr.TrustLineEntry) error {
-	var deltaBalances deltas
-	var deltaAccounts deltas
+// AddTrustline updates the set with a trustline entry from a history archive snapshot.
+func (s AssetStatSet) AddTrustline(trustLine xdr.TrustLineEntry) error {
+	var deltaBalances delta
+	var deltaAccounts delta
 	deltaBalances.AddByFlags(trustLine.Flags, int64(trustLine.Balance))
 	deltaAccounts.AddByFlags(trustLine.Flags, 1)
 
-	return s.AddDelta(trustLine.Asset, deltaBalances, deltaAccounts)
+	return s.addDelta(trustLine.Asset, deltaBalances, deltaAccounts)
 }
 
-type deltas struct {
+// AddClaimableBalance updates the set with a claimable balance entry from a history archive snapshot.
+func (s AssetStatSet) AddClaimableBalance(cBalance xdr.ClaimableBalanceEntry) error {
+	return s.addDelta(cBalance.Asset, delta{ClaimableBalances: int64(cBalance.Amount)}, delta{ClaimableBalances: 1})
+}
+
+type delta struct {
 	Authorized                      int64
 	AuthorizedToMaintainLiabilities int64
 	Unauthorized                    int64
 	ClaimableBalances               int64
 }
 
-func (d *deltas) AddByFlags(flags xdr.Uint32, amount int64) {
+func (d *delta) AddByFlags(flags xdr.Uint32, amount int64) {
 	switch xdr.TrustLineFlags(flags) {
 	case xdr.TrustLineFlagsAuthorizedFlag:
 		d.Authorized += amount
@@ -124,12 +129,12 @@ func (d *deltas) AddByFlags(flags xdr.Uint32, amount int64) {
 	}
 }
 
-func (d deltas) isEmpty() bool {
-	return d == deltas{}
+func (d delta) isEmpty() bool {
+	return d == delta{}
 }
 
-// AddDelta adds a delta balance and delta accounts to a given asset trustline.
-func (s AssetStatSet) AddDelta(asset xdr.Asset, deltaBalances, deltaAccounts deltas) error {
+// addDelta adds a delta balance and delta accounts to a given asset trustline.
+func (s AssetStatSet) addDelta(asset xdr.Asset, deltaBalances, deltaAccounts delta) error {
 	if deltaBalances.isEmpty() && deltaAccounts.isEmpty() {
 		return nil
 	}

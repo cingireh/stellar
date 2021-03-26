@@ -27,7 +27,7 @@ const assetStatsBatchSize = 500
 // check them.
 // There is a test that checks it, to fix it: update the actual `verifyState`
 // method instead of just updating this value!
-const stateVerifierExpectedIngestionVersion = 13
+const stateVerifierExpectedIngestionVersion = 14
 
 // verifyState is called as a go routine from pipeline post hook every 64
 // ledgers. It checks if the state is correct. If another go routine is already
@@ -539,7 +539,7 @@ func addTrustLinesToStateVerifier(
 		if err := verifier.Write(entry); err != nil {
 			return err
 		}
-		if err := assetStats.Add(trustline); err != nil {
+		if err := assetStats.AddTrustline(trustline); err != nil {
 			return ingest.NewStateError(
 				errors.Wrap(err, "could not add trustline to asset stats"),
 			)
@@ -600,6 +600,11 @@ func addClaimableBalanceToStateVerifier(
 		addLedgerEntrySponsor(&entry, row.Sponsor)
 		if err := verifier.Write(entry); err != nil {
 			return err
+		}
+		if err := assetStats.AddClaimableBalance(cBalance); err != nil {
+			return ingest.NewStateError(
+				errors.Wrap(err, "could not add claimable balance to asset stats"),
+			)
 		}
 	}
 
