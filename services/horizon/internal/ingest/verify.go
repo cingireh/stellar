@@ -539,7 +539,7 @@ func addTrustLinesToStateVerifier(
 		if err := verifier.Write(entry); err != nil {
 			return err
 		}
-		if err := assetStats.AddTrustline(trustline); err != nil {
+		if err := assetStats.AddTrustline(nil, &trustline); err != nil {
 			return ingest.NewStateError(
 				errors.Wrap(err, "could not add trustline to asset stats"),
 			)
@@ -601,7 +601,7 @@ func addClaimableBalanceToStateVerifier(
 		if err := verifier.Write(entry); err != nil {
 			return err
 		}
-		if err := assetStats.AddClaimableBalance(cBalance); err != nil {
+		if err := assetStats.AddClaimableBalance(nil, &cBalance); err != nil {
 			return ingest.NewStateError(
 				errors.Wrap(err, "could not add claimable balance to asset stats"),
 			)

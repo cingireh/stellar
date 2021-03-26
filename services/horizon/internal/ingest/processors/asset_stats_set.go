@@ -1,6 +1,7 @@
 package processors
 
 import (
+	"github.com/stellar/go/ingest"
 	"math/big"
 
 	"github.com/stellar/go/services/horizon/internal/db2/history"
@@ -96,25 +97,6 @@ func (value assetStatValue) ConvertToHistoryObject() history.ExpAssetStat {
 // AssetStatSet represents a collection of asset stats
 type AssetStatSet map[assetStatKey]*assetStatValue
 
-// AddTrustline updates the set with a trustline entry from a history archive snapshot.
-func (s AssetStatSet) AddTrustline(trustLine xdr.TrustLineEntry) error {
-	var deltaBalances delta
-	var deltaAccounts delta
-	deltaBalances.AddByFlags(trustLine.Flags, int64(trustLine.Balance))
-	deltaAccounts.AddByFlags(trustLine.Flags, 1)
-
-	return s.addDelta(trustLine.Asset, deltaBalances, deltaAccounts)
-}
-
-// AddClaimableBalance updates the set with a claimable balance entry from a history archive snapshot.
-func (s AssetStatSet) AddClaimableBalance(cBalance xdr.ClaimableBalanceEntry) error {
-	if cBalance.Asset.Type == xdr.AssetTypeAssetTypeNative {
-		return nil
-	}
-
-	return s.addDelta(cBalance.Asset, delta{ClaimableBalances: int64(cBalance.Amount)}, delta{ClaimableBalances: 1})
-}
-
 type delta struct {
 	Authorized                      int64
 	AuthorizedToMaintainLiabilities int64
@@ -122,7 +104,7 @@ type delta struct {
 	ClaimableBalances               int64
 }
 
-func (d *delta) AddByFlags(flags xdr.Uint32, amount int64) {
+func (d *delta) addByFlags(flags xdr.Uint32, amount int64) {
 	switch xdr.TrustLineFlags(flags) {
 	case xdr.TrustLineFlagsAuthorizedFlag:
 		d.Authorized += amount
@@ -177,6 +159,72 @@ func (s AssetStatSet) addDelta(asset xdr.Asset, deltaBalances, deltaAccounts del
 		delete(s, key)
 	}
 
+	return nil
+}
+
+// AddTrustline updates the set with a trustline entry from a history archive snapshot.
+func (s AssetStatSet) AddTrustline(
+	pre *xdr.TrustLineEntry,
+	post *xdr.TrustLineEntry,
+) error {
+	deltaAccounts := delta{}
+	deltaBalances := delta{}
+
+	if pre == nil && post == nil {
+		return ingest.NewStateError(errors.New("both pre and post trustlines cannot be nil"))
+	}
+
+	var asset xdr.Asset
+	if pre != nil {
+		asset = pre.Asset
+		deltaAccounts.addByFlags(pre.Flags, -1)
+		deltaBalances.addByFlags(pre.Flags, -int64(pre.Balance))
+	}
+	if post != nil {
+		asset = post.Asset
+		deltaAccounts.addByFlags(post.Flags, 1)
+		deltaBalances.addByFlags(post.Flags, int64(post.Balance))
+	}
+
+	err := s.addDelta(asset, deltaBalances, deltaAccounts)
+	if err != nil {
+		return errors.Wrap(err, "error running AssetStatSet.addDelta")
+	}
+	return nil
+}
+
+// AddClaimableBalance updates the set with a claimable balance entry from a history archive snapshot.
+func (s AssetStatSet) AddClaimableBalance(
+	pre *xdr.ClaimableBalanceEntry,
+	post *xdr.ClaimableBalanceEntry,
+) error {
+	deltaAccounts := delta{}
+	deltaBalances := delta{}
+
+	if pre == nil && post == nil {
+		return ingest.NewStateError(errors.New("both pre and post claimable balances cannot be nil"))
+	}
+
+	var asset xdr.Asset
+	if pre != nil {
+		asset = pre.Asset
+		deltaAccounts.ClaimableBalances--
+		deltaBalances.ClaimableBalances -= int64(pre.Amount)
+	}
+	if post != nil {
+		asset = post.Asset
+		deltaAccounts.ClaimableBalances++
+		deltaBalances.ClaimableBalances += int64(post.Amount)
+	}
+
+	if asset.Type == xdr.AssetTypeAssetTypeNative {
+		return nil
+	}
+
+	err := s.addDelta(asset, deltaBalances, deltaAccounts)
+	if err != nil {
+		return errors.Wrap(err, "error running AssetStatSet.addDelta")
+	}
 	return nil
 }
 

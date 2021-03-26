@@ -440,7 +440,7 @@ func (s *VerifyRangeStateTestSuite) TestVerifyFailsWhenAssetStatsMismatch() {
 	set := processors.AssetStatSet{}
 
 	trustLineIssuer := xdr.MustAddress("GBRPYHIL2CI3FNQ4BXLFMNDLFJUNPU2HY3ZMFSHONUCEOASW7QC7OX2H")
-	set.AddTrustline(xdr.TrustLineEntry{
+	set.AddTrustline(nil, &xdr.TrustLineEntry{
 		AccountId: xdr.MustAddress(keypair.MustRandom().Address()),
 		Balance:   123,
 		Asset:     xdr.MustNewCreditAsset("EUR", trustLineIssuer.Address()),
