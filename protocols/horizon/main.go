@@ -185,6 +185,7 @@ func (res AssetStat) PagingToken() string {
 type AssetStatBalances struct {
 	Authorized                      string `json:"authorized"`
 	AuthorizedToMaintainLiabilities string `json:"authorized_to_maintain_liabilities"`
+	ClaimableBalances               string `json:"claimable_balances"`
 	Unauthorized                    string `json:"unauthorized"`
 }
 
@@ -192,6 +193,7 @@ type AssetStatBalances struct {
 type AssetStatAccounts struct {
 	Authorized                      int32 `json:"authorized"`
 	AuthorizedToMaintainLiabilities int32 `json:"authorized_to_maintain_liabilities"`
+	ClaimableBalances               int32 `json:"claimable_balances"`
 	Unauthorized                    int32 `json:"unauthorized"`
 }
 

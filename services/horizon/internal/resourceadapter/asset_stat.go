@@ -67,5 +67,10 @@ func populateAssetStatBalances(res *protocol.AssetStatBalances, row history.ExpA
 		return errors.Wrapf(err, "Invalid amount in PopulateAssetStatBalances: %q", row.Unauthorized)
 	}
 
+	res.ClaimableBalances, err = amount.IntStringToAmount(row.ClaimableBalances)
+	if err != nil {
+		return errors.Wrapf(err, "Invalid amount in PopulateAssetStatBalances: %q", row.ClaimableBalances)
+	}
+
 	return nil
 }
