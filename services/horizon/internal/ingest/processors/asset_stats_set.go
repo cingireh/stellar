@@ -116,11 +116,11 @@ type deltas struct {
 func (d *deltas) AddByFlags(flags xdr.Uint32, amount int64) {
 	switch xdr.TrustLineFlags(flags) {
 	case xdr.TrustLineFlagsAuthorizedFlag:
-		d.Authorized = amount
+		d.Authorized += amount
 	case xdr.TrustLineFlagsAuthorizedToMaintainLiabilitiesFlag:
-		d.AuthorizedToMaintainLiabilities = amount
+		d.AuthorizedToMaintainLiabilities += amount
 	default:
-		d.Unauthorized = amount
+		d.Unauthorized += amount
 	}
 }
 
@@ -130,7 +130,7 @@ func (d deltas) isEmpty() bool {
 
 // AddDelta adds a delta balance and delta accounts to a given asset trustline.
 func (s AssetStatSet) AddDelta(asset xdr.Asset, deltaBalances, deltaAccounts deltas) error {
-	if deltaBalances.isEmpty() && deltaBalances.isEmpty() {
+	if deltaBalances.isEmpty() && deltaAccounts.isEmpty() {
 		return nil
 	}
 
