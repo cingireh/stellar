@@ -58,26 +58,39 @@ func TestAddAndRemoveAssetStats(t *testing.T) {
 		NumAccounts: 1,
 	}
 
-	err := set.Add(xdr.TrustLineEntry{
-		AccountId: xdr.MustAddress("GAOQJGUAB7NI7K7I62ORBXMN3J4SSWQUQ7FOEPSDJ322W2HMCNWPHXFB"),
-		Asset:     xdr.MustNewCreditAsset(eur, trustLineIssuer.Address()),
-		Balance:   1,
-		Flags:     xdr.Uint32(xdr.TrustLineFlagsAuthorizedFlag),
-	})
-	if err != nil {
-		t.Fatalf("unexpected error %v", err)
-	}
+	assert.NoError(
+		t,
+		set.Add(xdr.TrustLineEntry{
+			AccountId: xdr.MustAddress("GAOQJGUAB7NI7K7I62ORBXMN3J4SSWQUQ7FOEPSDJ322W2HMCNWPHXFB"),
+			Asset:     xdr.MustNewCreditAsset(eur, trustLineIssuer.Address()),
+			Balance:   1,
+			Flags:     xdr.Uint32(xdr.TrustLineFlagsAuthorizedFlag),
+		}),
+	)
 	assertAllEquals(t, set, []history.ExpAssetStat{eurAssetStat})
 
-	err = set.Add(xdr.TrustLineEntry{
-		AccountId: xdr.MustAddress("GAOQJGUAB7NI7K7I62ORBXMN3J4SSWQUQ7FOEPSDJ322W2HMCNWPHXFB"),
-		Asset:     xdr.MustNewCreditAsset(eur, trustLineIssuer.Address()),
-		Balance:   24,
-		Flags:     xdr.Uint32(xdr.TrustLineFlagsAuthorizedFlag),
-	})
-	if err != nil {
-		t.Fatalf("unexpected error %v", err)
-	}
+	eurAssetStat.Accounts.ClaimableBalances++
+	eurAssetStat.Balances.ClaimableBalances = "23"
+	assert.NoError(
+		t,
+		set.AddDelta(
+			xdr.MustNewCreditAsset(eur, trustLineIssuer.Address()),
+			deltas{ClaimableBalances: 23},
+			deltas{ClaimableBalances: 1},
+		),
+	)
+
+	assertAllEquals(t, set, []history.ExpAssetStat{eurAssetStat})
+
+	assert.NoError(
+		t,
+		set.Add(xdr.TrustLineEntry{
+			AccountId: xdr.MustAddress("GAOQJGUAB7NI7K7I62ORBXMN3J4SSWQUQ7FOEPSDJ322W2HMCNWPHXFB"),
+			Asset:     xdr.MustNewCreditAsset(eur, trustLineIssuer.Address()),
+			Balance:   24,
+			Flags:     xdr.Uint32(xdr.TrustLineFlagsAuthorizedFlag),
+		}),
+	)
 
 	eurAssetStat.Balances.Authorized = "25"
 	eurAssetStat.Amount = "25"
@@ -86,48 +99,47 @@ func TestAddAndRemoveAssetStats(t *testing.T) {
 	assertAllEquals(t, set, []history.ExpAssetStat{eurAssetStat})
 
 	usd := "USD"
-	err = set.Add(xdr.TrustLineEntry{
-		AccountId: xdr.MustAddress("GC3C4AKRBQLHOJ45U4XG35ESVWRDECWO5XLDGYADO6DPR3L7KIDVUMML"),
-		Asset:     xdr.MustNewCreditAsset(usd, trustLineIssuer.Address()),
-		Balance:   10,
-		Flags:     xdr.Uint32(xdr.TrustLineFlagsAuthorizedFlag),
-	})
-	if err != nil {
-		t.Fatalf("unexpected error %v", err)
-	}
+	assert.NoError(
+		t,
+		set.Add(xdr.TrustLineEntry{
+			AccountId: xdr.MustAddress("GC3C4AKRBQLHOJ45U4XG35ESVWRDECWO5XLDGYADO6DPR3L7KIDVUMML"),
+			Asset:     xdr.MustNewCreditAsset(usd, trustLineIssuer.Address()),
+			Balance:   10,
+			Flags:     xdr.Uint32(xdr.TrustLineFlagsAuthorizedFlag),
+		}),
+	)
 
 	ether := "ETHER"
-	err = set.Add(xdr.TrustLineEntry{
-		AccountId: xdr.MustAddress("GC3C4AKRBQLHOJ45U4XG35ESVWRDECWO5XLDGYADO6DPR3L7KIDVUMML"),
-		Asset:     xdr.MustNewCreditAsset(ether, trustLineIssuer.Address()),
-		Balance:   3,
-		Flags:     xdr.Uint32(xdr.TrustLineFlagsAuthorizedFlag),
-	})
-	if err != nil {
-		t.Fatalf("unexpected error %v", err)
-	}
+	assert.NoError(
+		t,
+		set.Add(xdr.TrustLineEntry{
+			AccountId: xdr.MustAddress("GC3C4AKRBQLHOJ45U4XG35ESVWRDECWO5XLDGYADO6DPR3L7KIDVUMML"),
+			Asset:     xdr.MustNewCreditAsset(ether, trustLineIssuer.Address()),
+			Balance:   3,
+			Flags:     xdr.Uint32(xdr.TrustLineFlagsAuthorizedFlag),
+		}),
+	)
 
 	// Add an authorized_to_maintain_liabilities trust line
-	err = set.Add(xdr.TrustLineEntry{
-		AccountId: xdr.MustAddress("GAOQJGUAB7NI7K7I62ORBXMN3J4SSWQUQ7FOEPSDJ322W2HMCNWPHXFB"),
-		Asset:     xdr.MustNewCreditAsset(ether, trustLineIssuer.Address()),
-		Balance:   4,
-		Flags:     xdr.Uint32(xdr.TrustLineFlagsAuthorizedToMaintainLiabilitiesFlag),
-	})
-	if err != nil {
-		t.Fatalf("unexpected error %v", err)
-	}
+	assert.NoError(
+		t,
+		set.Add(xdr.TrustLineEntry{
+			AccountId: xdr.MustAddress("GAOQJGUAB7NI7K7I62ORBXMN3J4SSWQUQ7FOEPSDJ322W2HMCNWPHXFB"),
+			Asset:     xdr.MustNewCreditAsset(ether, trustLineIssuer.Address()),
+			Balance:   4,
+			Flags:     xdr.Uint32(xdr.TrustLineFlagsAuthorizedToMaintainLiabilitiesFlag),
+		}),
+	)
 
 	// Add an unauthorized trust line
-	err = set.Add(xdr.TrustLineEntry{
-		AccountId: xdr.MustAddress("GAOQJGUAB7NI7K7I62ORBXMN3J4SSWQUQ7FOEPSDJ322W2HMCNWPHXFB"),
-		Asset:     xdr.MustNewCreditAsset(ether, trustLineIssuer.Address()),
-		Balance:   5,
-	})
-	if err != nil {
-		t.Fatalf("unexpected error %v", err)
-	}
-
+	assert.NoError(
+		t,
+		set.Add(xdr.TrustLineEntry{
+			AccountId: xdr.MustAddress("GAOQJGUAB7NI7K7I62ORBXMN3J4SSWQUQ7FOEPSDJ322W2HMCNWPHXFB"),
+			Asset:     xdr.MustNewCreditAsset(ether, trustLineIssuer.Address()),
+			Balance:   5,
+		}),
+	)
 	expected := []history.ExpAssetStat{
 		{
 			AssetType:   xdr.AssetTypeAssetTypeCreditAlphanum12,

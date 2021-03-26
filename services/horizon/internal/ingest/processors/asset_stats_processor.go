@@ -45,12 +45,12 @@ func (p *AssetStatsProcessor) ProcessChange(change ingest.Change) error {
 		if p.useLedgerEntryCache {
 			return p.useCachedChange(change)
 		}
-		return p.processClaimableBalanceChange(change)
+		return p.addNewClaimableBalance(change)
 	case xdr.LedgerEntryTypeTrustline:
 		if p.useLedgerEntryCache {
 			return p.useCachedChange(change)
 		}
-		return p.processTrustlineChange(change)
+		return p.addNewTrustline(change)
 	default:
 		return nil
 	}
@@ -72,43 +72,73 @@ func (p *AssetStatsProcessor) useCachedChange(change ingest.Change) error {
 	return nil
 }
 
-func (p *AssetStatsProcessor) processClaimableBalanceChange(change ingest.Change) error {
-	switch {
-	case change.Pre == nil && change.Post != nil:
-		// Created
-		// newCb := change.Post.Data.MustClaimableBalance()
-		// Figure out the asset
-		// Exclude XLM
-		// increase claimable balance stats
-	case change.Pre != nil && change.Post != nil:
-		// Not used now. Handled for the future, just in case.
-		// Figure out the asset
-		// Exclude XLM
-	case change.Pre != nil && change.Post == nil:
-		// Removed
-		// oldCb := change.Pre.Data.MustClaimableBalance()
-		// Figure out the asset
-		// Exclude XLM
-		// decrease claimable balance stats
-	default:
-		return errors.New("Invalid io.Change: change.Pre == nil && change.Post == nil")
-	}
-
-	return nil
-}
-
-func (p *AssetStatsProcessor) processTrustlineChange(change ingest.Change) error {
+func (p *AssetStatsProcessor) addNewClaimableBalance(change ingest.Change) error {
 	if change.Pre != nil || change.Post == nil {
 		return errors.New("AssetStatsProcessor is in insert only mode")
 	}
 
-	postTrustLine := change.Post.Data.MustTrustLine()
-	err := p.adjustAssetStat(nil, &postTrustLine)
+	post := change.Post.Data.MustClaimableBalance()
+
+	err := p.adjustAssetStatForClaimableBalance(nil, &post)
 	if err != nil {
 		return errors.Wrap(err, "Error adjusting asset stat")
 	}
 
 	return nil
+}
+
+func (p *AssetStatsProcessor) addNewTrustline(change ingest.Change) error {
+	if change.Pre != nil || change.Post == nil {
+		return errors.New("AssetStatsProcessor is in insert only mode")
+	}
+
+	postTrustLine := change.Post.Data.MustTrustLine()
+	err := p.adjustAssetStatForTrustline(nil, &postTrustLine)
+	if err != nil {
+		return errors.Wrap(err, "Error adjusting asset stat")
+	}
+
+	return nil
+}
+
+func (p *AssetStatsProcessor) commitClaimableBalanceChange(change ingest.Change) error {
+	switch {
+	case change.Pre == nil && change.Post != nil:
+		// Created
+		post := change.Post.Data.MustClaimableBalance()
+		return p.adjustAssetStatForClaimableBalance(nil, &post)
+	case change.Pre != nil && change.Post != nil:
+		// Updated
+		pre := change.Pre.Data.MustClaimableBalance()
+		post := change.Post.Data.MustClaimableBalance()
+		return p.adjustAssetStatForClaimableBalance(&pre, &post)
+	case change.Pre != nil && change.Post == nil:
+		// Removed
+		pre := change.Pre.Data.MustClaimableBalance()
+		return p.adjustAssetStatForClaimableBalance(&pre, nil)
+	default:
+		return errors.New("Invalid io.Change: change.Pre == nil && change.Post == nil")
+	}
+}
+
+func (p *AssetStatsProcessor) commitTrustlineChange(change ingest.Change) error {
+	switch {
+	case change.Pre == nil && change.Post != nil:
+		// Created
+		post := change.Post.Data.MustTrustLine()
+		return p.adjustAssetStatForTrustline(nil, &post)
+	case change.Pre != nil && change.Post != nil:
+		// Updated
+		pre := change.Pre.Data.MustTrustLine()
+		post := change.Post.Data.MustTrustLine()
+		return p.adjustAssetStatForTrustline(&pre, &post)
+	case change.Pre != nil && change.Post == nil:
+		// Removed
+		pre := change.Pre.Data.MustTrustLine()
+		return p.adjustAssetStatForTrustline(&pre, nil)
+	default:
+		return errors.New("Invalid io.Change: change.Pre == nil && change.Post == nil")
+	}
 }
 
 func (p *AssetStatsProcessor) Commit() error {
@@ -119,23 +149,13 @@ func (p *AssetStatsProcessor) Commit() error {
 	changes := p.cache.GetChanges()
 	for _, change := range changes {
 		var err error
-
-		switch {
-		case change.Pre == nil && change.Post != nil:
-			// Created
-			postTrustLine := change.Post.Data.MustTrustLine()
-			err = p.adjustAssetStat(nil, &postTrustLine)
-		case change.Pre != nil && change.Post != nil:
-			// Updated
-			preTrustLine := change.Pre.Data.MustTrustLine()
-			postTrustLine := change.Post.Data.MustTrustLine()
-			err = p.adjustAssetStat(&preTrustLine, &postTrustLine)
-		case change.Pre != nil && change.Post == nil:
-			// Removed
-			preTrustLine := change.Pre.Data.MustTrustLine()
-			err = p.adjustAssetStat(&preTrustLine, nil)
+		switch change.Type {
+		case xdr.LedgerEntryTypeClaimableBalance:
+			err = p.commitClaimableBalanceChange(change)
+		case xdr.LedgerEntryTypeTrustline:
+			err = p.commitTrustlineChange(change)
 		default:
-			return errors.New("Invalid io.Change: change.Pre == nil && change.Post == nil")
+			return errors.Errorf("Change type %v is unexpected", change.Type)
 		}
 
 		if err != nil {
@@ -178,6 +198,13 @@ func (p *AssetStatsProcessor) Commit() error {
 			} else if delta.Accounts.Unauthorized < 0 {
 				return ingest.NewStateError(errors.Errorf(
 					"Unauthorized accounts negative but DB entry does not exist for asset: %s %s %s",
+					delta.AssetType,
+					delta.AssetCode,
+					delta.AssetIssuer,
+				))
+			} else if delta.Accounts.ClaimableBalances < 0 {
+				return ingest.NewStateError(errors.Errorf(
+					"Claimable balance accounts negative but DB entry does not exist for asset: %s %s %s",
 					delta.AssetType,
 					delta.AssetCode,
 					delta.AssetIssuer,
@@ -253,30 +280,60 @@ func (p *AssetStatsProcessor) Commit() error {
 	return nil
 }
 
-func (p *AssetStatsProcessor) adjustAssetStat(
-	preTrustline *xdr.TrustLineEntry,
-	postTrustline *xdr.TrustLineEntry,
+func (p *AssetStatsProcessor) adjustAssetStatForTrustline(
+	pre *xdr.TrustLineEntry,
+	post *xdr.TrustLineEntry,
 ) error {
 	deltaAccounts := deltas{}
 	deltaBalances := deltas{}
 
-	if preTrustline == nil && postTrustline == nil {
+	if pre == nil && post == nil {
 		return ingest.NewStateError(errors.New("both pre and post trustlines cannot be nil"))
 	}
 
-	var trustline xdr.TrustLineEntry
-	if preTrustline != nil {
-		trustline = *preTrustline
-		deltaAccounts.AddByFlags(preTrustline.Flags, -1)
-		deltaBalances.AddByFlags(preTrustline.Flags, -int64(preTrustline.Balance))
+	var asset xdr.Asset
+	if pre != nil {
+		asset = pre.Asset
+		deltaAccounts.AddByFlags(pre.Flags, -1)
+		deltaBalances.AddByFlags(pre.Flags, -int64(pre.Balance))
 	}
-	if postTrustline != nil {
-		trustline = *postTrustline
-		deltaAccounts.AddByFlags(postTrustline.Flags, 1)
-		deltaBalances.AddByFlags(postTrustline.Flags, int64(postTrustline.Balance))
+	if post != nil {
+		asset = post.Asset
+		deltaAccounts.AddByFlags(post.Flags, 1)
+		deltaBalances.AddByFlags(post.Flags, int64(post.Balance))
 	}
 
-	err := p.assetStatSet.AddDelta(trustline.Asset, deltaBalances, deltaAccounts)
+	err := p.assetStatSet.AddDelta(asset, deltaBalances, deltaAccounts)
+	if err != nil {
+		return errors.Wrap(err, "error running AssetStatSet.AddDelta")
+	}
+	return nil
+}
+
+func (p *AssetStatsProcessor) adjustAssetStatForClaimableBalance(
+	pre *xdr.ClaimableBalanceEntry,
+	post *xdr.ClaimableBalanceEntry,
+) error {
+	deltaAccounts := deltas{}
+	deltaBalances := deltas{}
+
+	if pre == nil && post == nil {
+		return ingest.NewStateError(errors.New("both pre and post claimable balances cannot be nil"))
+	}
+
+	var asset xdr.Asset
+	if pre != nil {
+		asset = pre.Asset
+		deltaAccounts.ClaimableBalances--
+		deltaBalances.ClaimableBalances -= int64(pre.Amount)
+	}
+	if post != nil {
+		asset = post.Asset
+		deltaAccounts.ClaimableBalances++
+		deltaBalances.ClaimableBalances += int64(post.Amount)
+	}
+
+	err := p.assetStatSet.AddDelta(asset, deltaBalances, deltaAccounts)
 	if err != nil {
 		return errors.Wrap(err, "error running AssetStatSet.AddDelta")
 	}
