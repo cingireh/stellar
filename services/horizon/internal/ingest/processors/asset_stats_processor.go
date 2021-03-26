@@ -43,12 +43,12 @@ func (p *AssetStatsProcessor) ProcessChange(change ingest.Change) error {
 	switch change.Type {
 	case xdr.LedgerEntryTypeClaimableBalance:
 		if p.useLedgerEntryCache {
-			return p.useCachedChange(change)
+			return p.addToCache(change)
 		}
 		return p.addNewClaimableBalance(change)
 	case xdr.LedgerEntryTypeTrustline:
 		if p.useLedgerEntryCache {
-			return p.useCachedChange(change)
+			return p.addToCache(change)
 		}
 		return p.addNewTrustline(change)
 	default:
@@ -56,7 +56,7 @@ func (p *AssetStatsProcessor) ProcessChange(change ingest.Change) error {
 	}
 }
 
-func (p *AssetStatsProcessor) useCachedChange(change ingest.Change) error {
+func (p *AssetStatsProcessor) addToCache(change ingest.Change) error {
 	err := p.cache.AddChange(change)
 	if err != nil {
 		return errors.Wrap(err, "error adding to ledgerCache")
