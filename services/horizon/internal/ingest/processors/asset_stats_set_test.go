@@ -5,6 +5,8 @@ import (
 	"sort"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/stellar/go/services/horizon/internal/db2/history"
 	"github.com/stellar/go/xdr"
 )
@@ -27,16 +29,12 @@ func TestEmptyAssetStatSet(t *testing.T) {
 
 func assertAllEquals(t *testing.T, set AssetStatSet, expected []history.ExpAssetStat) {
 	all := set.All()
-	if len(all) != len(expected) {
-		t.Fatalf("expected list of %v asset stats but got %v", len(expected), all)
-	}
+	assert.Len(t, all, len(expected))
 	sort.Slice(all, func(i, j int) bool {
 		return all[i].AssetCode < all[j].AssetCode
 	})
 	for i, got := range all {
-		if expected[i] != got {
-			t.Fatalf("expected asset stat to be %v but got %v", expected[i], got)
-		}
+		assert.Equal(t, expected[i], got)
 	}
 }
 
@@ -54,6 +52,7 @@ func TestAddAndRemoveAssetStats(t *testing.T) {
 			Authorized:                      "1",
 			AuthorizedToMaintainLiabilities: "0",
 			Unauthorized:                    "0",
+			ClaimableBalances:               "0",
 		},
 		Amount:      "1",
 		NumAccounts: 1,
@@ -143,6 +142,7 @@ func TestAddAndRemoveAssetStats(t *testing.T) {
 				Authorized:                      "3",
 				AuthorizedToMaintainLiabilities: "4",
 				Unauthorized:                    "5",
+				ClaimableBalances:               "0",
 			},
 			Amount:      "3",
 			NumAccounts: 1,
@@ -159,6 +159,7 @@ func TestAddAndRemoveAssetStats(t *testing.T) {
 				Authorized:                      "10",
 				AuthorizedToMaintainLiabilities: "0",
 				Unauthorized:                    "0",
+				ClaimableBalances:               "0",
 			},
 			Amount:      "10",
 			NumAccounts: 1,
@@ -207,6 +208,7 @@ func TestOverflowAssetStatSet(t *testing.T) {
 			Authorized:                      "9223372036854775807",
 			AuthorizedToMaintainLiabilities: "0",
 			Unauthorized:                    "0",
+			ClaimableBalances:               "0",
 		},
 		Amount:      "9223372036854775807",
 		NumAccounts: 1,
@@ -240,6 +242,7 @@ func TestOverflowAssetStatSet(t *testing.T) {
 			Authorized:                      "18446744073709551614",
 			AuthorizedToMaintainLiabilities: "0",
 			Unauthorized:                    "0",
+			ClaimableBalances:               "0",
 		},
 		Amount:      "18446744073709551614",
 		NumAccounts: 2,

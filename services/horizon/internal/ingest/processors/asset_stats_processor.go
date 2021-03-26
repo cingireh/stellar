@@ -41,6 +41,11 @@ func (p *AssetStatsProcessor) reset() {
 
 func (p *AssetStatsProcessor) ProcessChange(change ingest.Change) error {
 	switch change.Type {
+	case xdr.LedgerEntryTypeClaimableBalance:
+		if p.useLedgerEntryCache {
+			return p.useCachedChange(change)
+		}
+		return p.processClaimableBalanceChange(change)
 	case xdr.LedgerEntryTypeTrustline:
 		if p.useLedgerEntryCache {
 			return p.useCachedChange(change)
@@ -64,6 +69,31 @@ func (p *AssetStatsProcessor) useCachedChange(change ingest.Change) error {
 		}
 		p.reset()
 	}
+	return nil
+}
+
+func (p *AssetStatsProcessor) processClaimableBalanceChange(change ingest.Change) error {
+	switch {
+	case change.Pre == nil && change.Post != nil:
+		// Created
+		// newCb := change.Post.Data.MustClaimableBalance()
+		// Figure out the asset
+		// Exclude XLM
+		// increase claimable balance stats
+	case change.Pre != nil && change.Post != nil:
+		// Not used now. Handled for the future, just in case.
+		// Figure out the asset
+		// Exclude XLM
+	case change.Pre != nil && change.Post == nil:
+		// Removed
+		// oldCb := change.Pre.Data.MustClaimableBalance()
+		// Figure out the asset
+		// Exclude XLM
+		// decrease claimable balance stats
+	default:
+		return errors.New("Invalid io.Change: change.Pre == nil && change.Post == nil")
+	}
+
 	return nil
 }
 
@@ -227,8 +257,8 @@ func (p *AssetStatsProcessor) adjustAssetStat(
 	preTrustline *xdr.TrustLineEntry,
 	postTrustline *xdr.TrustLineEntry,
 ) error {
-	deltaAccounts := map[xdr.Uint32]int32{}
-	deltaBalances := map[xdr.Uint32]int64{}
+	deltaAccounts := deltas{}
+	deltaBalances := deltas{}
 
 	if preTrustline == nil && postTrustline == nil {
 		return ingest.NewStateError(errors.New("both pre and post trustlines cannot be nil"))
@@ -237,13 +267,13 @@ func (p *AssetStatsProcessor) adjustAssetStat(
 	var trustline xdr.TrustLineEntry
 	if preTrustline != nil {
 		trustline = *preTrustline
-		deltaAccounts[preTrustline.Flags] -= 1
-		deltaBalances[preTrustline.Flags] -= int64(preTrustline.Balance)
+		deltaAccounts.AddByFlags(preTrustline.Flags, -1)
+		deltaBalances.AddByFlags(preTrustline.Flags, -int64(preTrustline.Balance))
 	}
 	if postTrustline != nil {
 		trustline = *postTrustline
-		deltaAccounts[postTrustline.Flags] += 1
-		deltaBalances[postTrustline.Flags] += int64(postTrustline.Balance)
+		deltaAccounts.AddByFlags(postTrustline.Flags, 1)
+		deltaBalances.AddByFlags(postTrustline.Flags, int64(postTrustline.Balance))
 	}
 
 	err := p.assetStatSet.AddDelta(trustline.Asset, deltaBalances, deltaAccounts)
