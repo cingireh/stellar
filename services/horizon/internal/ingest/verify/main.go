@@ -20,7 +20,7 @@ import (
 // that will be used for equality check.
 type TransformLedgerEntryFunction func(xdr.LedgerEntry) (ignore bool, newEntry xdr.LedgerEntry)
 
-// StateVerifier verifies if ledger entries provided by AddTrustline method are the same
+// StateVerifier verifies if ledger entries provided by Add method are the same
 // as in the checkpoint ledger entries provided by CheckpointChangeReader.
 // The algorithm works in the following way:
 //   0. Develop TransformFunction. It should remove all fields and objects not

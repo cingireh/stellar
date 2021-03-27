@@ -162,7 +162,9 @@ func (s AssetStatSet) addDelta(asset xdr.Asset, deltaBalances, deltaAccounts del
 	return nil
 }
 
-// AddTrustline updates the set with a trustline entry from a history archive snapshot.
+// AddTrustline updates the set to account for how a given trustline has changed.
+// pre is the trustline before the change (nil indicates that this change introduced the trustline into the ledger)
+// post is the trustline after the change (nil indicates that this change removed the trustline from the ledger)
 func (s AssetStatSet) AddTrustline(
 	pre *xdr.TrustLineEntry,
 	post *xdr.TrustLineEntry,
@@ -193,7 +195,11 @@ func (s AssetStatSet) AddTrustline(
 	return nil
 }
 
-// AddClaimableBalance updates the set with a claimable balance entry from a history archive snapshot.
+// AddClaimableBalance updates the set to account for how a given claimable balance has changed.
+// pre is the claimable balance before the change (nil indicates that this change introduced the
+// claimable balance into the ledger)
+// post is the claimable balance after the change (nil indicates that this change removed the
+// claimable balance from the ledger)
 func (s AssetStatSet) AddClaimableBalance(
 	pre *xdr.ClaimableBalanceEntry,
 	post *xdr.ClaimableBalanceEntry,
